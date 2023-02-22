@@ -1,8 +1,9 @@
 import json
 import os
-from datetime import datetime
+from datetime import datetime, date
 from json import JSONDecodeError
 
+from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -23,6 +24,7 @@ def add_note(request):
     password = js['password']
     content = js['content']
     hint = js['hint']
+    tag = js['tag']
 
     salt = generate_random_salt(32)
     iv = os.urandom(16)
@@ -30,9 +32,10 @@ def add_note(request):
     note = Note(
             note_user_id=user_id,
             note_title=title,note_content=enc_content,
-            note_salt= salt,note_iv=iv,
+            note_salt=salt,note_iv=iv,
             note_date=datetime.now().date(),
-            note_pwd_hint=hint)
+            note_pwd_hint=hint,
+            note_tag=tag)
     note.save()
 
     response['msg'] = 'success'
@@ -56,7 +59,8 @@ def view_note(request):
         dec_content = decrypt_content(password,salt,iv,note_obj.note_content)
         response['data'] = {
             'title': note_obj.note_title,
-            'content': dec_content.decode()
+            'content': dec_content.decode(),
+            'tag':note_obj.note_tag
         }
     except Exception as e:
         if isinstance(e,UnicodeDecodeError):
@@ -126,10 +130,60 @@ def show_notes(request):
         res.append({
             'id':note.note_id,
             'title':note.note_title,
-            'date':note.note_date
+            'date':note.note_date,
+            'tag': note.note_tag
         })
     response['status'] = 0
     response['msg'] = 'success'
     response['data'] = res
 
     return JsonResponse(response)
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def search_note(request):
+    response = {}
+    js = json.loads(request.body)
+    keyword = js['keyword']
+
+    type = js['type']
+    # type = 1: 按标题搜索
+    # type = 2: 按标签搜索
+    # type = 3: 按日期搜索
+    # 注意: 按日期搜索时 keyword的格式为 YYYY-MM-DD,YYYY-MM-DD
+    # 第一个date是想要找到的最早的时间，如果无请填写为1970-01-01
+    # 第二个date是想要找到的最晚的时间，如果无请填写为2038-01-19
+    res_note_list = []
+    if type == 1:
+        res_note_list = Note.objects.filter(note_title__icontains=keyword)
+    elif type == 2:
+        res_note_list = Note.objects.filter(note_tag__icontains=keyword)
+    elif type == 3:
+        start_date,end_date = keyword.split(',')
+        start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        query = Q(note_date__gte=start_date) & Q(note_date__lte=end_date)
+        res_note_list = Note.objects.filter(query)
+    else:
+        response['status'] = 301
+        response['msg'] = 'type not support'
+
+    if res_note_list.count != 0:
+        response['status'] = 0
+        response['msg'] = 'Success'
+
+        res = []
+        for note in res_note_list:
+            res.append({
+                'id': note.note_id,
+                'title': note.note_title,
+                'date': note.note_date,
+                'tag': note.note_tag
+            })
+
+        response['data'] = res
+    else:
+        response['status'] = 302
+        response['msg'] = 'no result'
+    return JsonResponse(response)
+
