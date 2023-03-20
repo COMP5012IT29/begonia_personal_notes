@@ -107,6 +107,20 @@ def edit_note(request):
     response['status'] = 0
     return JsonResponse(response)
 
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def star_note(request):
+    response = {}
+    js = json.loads(request.body)
+    note_obj = Note.objects.get(note_id=js['note_id'])
+    note_obj.note_stared = not note_obj.note_stared
+    note_obj.save()
+    response['msg'] = 'success'
+    response['status'] = 0
+    return JsonResponse(response)
+
+
 @require_http_methods(['GET'])
 @csrf_exempt
 def show_notes(request):
