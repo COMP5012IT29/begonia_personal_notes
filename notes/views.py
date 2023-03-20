@@ -60,7 +60,9 @@ def view_note(request):
         response['data'] = {
             'title': note_obj.note_title,
             'content': dec_content.decode(),
-            'tag':note_obj.note_tag
+            'tag':note_obj.note_tag,
+            'date':note_obj.note_date,
+            'stared':note_obj.note_stared
         }
     except Exception as e:
         if isinstance(e,UnicodeDecodeError):
