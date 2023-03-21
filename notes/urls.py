@@ -12,5 +12,6 @@ urlpatterns = [
     path('search/',search_note,name='search note'),
     path('starNote/',star_note,name="star note"),
     path('recycle/',recycle_note,name="recycle note"),
-    path('deleteNote/',delete_note,name="delete note")
+    path('deleteNote/',delete_note,name="delete note"),
+    path('recoverNote/',recovery_note,name="recover note")
 ]

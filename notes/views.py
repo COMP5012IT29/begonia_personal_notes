@@ -216,21 +216,7 @@ def recycle_note(request):
 
     note_obj = Note.objects.get(note_id=js['note_id'])
     note_obj.note_deleted = True
-    note_obj.save()
-    response['status'] = 0
-    response['msg'] = 'success'
-    return JsonResponse(response)
-
-
-@require_http_methods(['POST'])
-@csrf_exempt
-def recycle_note(request):
-    response = {}
-    js = json.loads(request.body)
-
-    note_obj = Note.objects.get(note_id=js['note_id'])
-    note_obj.note_deleted = True
-    note_obj.note_title = 'deleted' + note_obj.note_title
+    note_obj.note_title = 'deleted_' + note_obj.note_title
     note_obj.save()
     response['status'] = 0
     response['msg'] = 'success'
@@ -243,16 +229,28 @@ def delete_note(request):
     response = {}
     js = json.loads(request.body)
     try:
-        # 查找用户
         note = Note.objects.filter(note_id=js['note_id']).get()
         note.delete()
         response['msg'] = 'success'
         response['status'] = 0
     except Note.DoesNotExist:
-        response['msg'] = 'User not found'
+        response['msg'] = 'Note not found'
         response['status'] = 31
     except Exception as e:
         response['msg'] = str(e)
         response['status'] = 4
 
+    return JsonResponse(response)
+
+@csrf_exempt
+@require_http_methods('POST')
+def recovery_note(request):
+    response = {}
+    js = json.loads(request.body)
+    note_obj = Note.objects.get(note_id=js['note_id'])
+    note_obj.note_deleted = False
+    note_obj.note_title = note_obj.note_title[8:]
+    note_obj.save()
+    response['status'] = 0
+    response['msg'] = 'success'
     return JsonResponse(response)
