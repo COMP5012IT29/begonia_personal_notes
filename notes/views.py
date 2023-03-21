@@ -221,6 +221,7 @@ def recycle_note(request):
     response['msg'] = 'success'
     return JsonResponse(response)
 
+
 @require_http_methods(['POST'])
 @csrf_exempt
 def recycle_note(request):
@@ -229,6 +230,7 @@ def recycle_note(request):
 
     note_obj = Note.objects.get(note_id=js['note_id'])
     note_obj.note_deleted = True
+    note_obj.note_title = 'deleted' + note_obj.note_title
     note_obj.save()
     response['status'] = 0
     response['msg'] = 'success'
