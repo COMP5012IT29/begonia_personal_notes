@@ -97,10 +97,14 @@ def edit_note(request):
     title = js['title']
     password = js['password'] # 这里如果密码错误会覆盖原密码
     content = js['content']
+    hint = js['hint']
+    tag = js['tag']
     enc_content = encrypt_content(password,salt,iv,content)
 
     note_obj.note_title = title
     note_obj.note_content = enc_content
+    note_obj.note_pwd_hint = hint
+    note_obj.note_tag = tag
     note_obj.save()
 
     response['msg'] = 'success'
