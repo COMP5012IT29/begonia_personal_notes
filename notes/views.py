@@ -175,14 +175,14 @@ def search_note(request):
     # 第二个date是想要找到的最晚的时间，如果无请填写为2038-01-19
     res_note_list = []
     if type == 1:
-        res_note_list = Note.objects.filter(note_title__icontains=keyword)
+        res_note_list = Note.objects.filter(note_title__icontains=keyword, note_deleted=False)
     elif type == 2:
-        res_note_list = Note.objects.filter(note_tag__icontains=keyword)
+        res_note_list = Note.objects.filter(note_tag__icontains=keyword, note_deleted=False)
     elif type == 3:
         start_date,end_date = keyword.split(',')
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
         end_date = datetime.strptime(end_date, '%Y-%m-%d')
-        query = Q(note_date__gte=start_date) & Q(note_date__lte=end_date)
+        query = Q(note_date__gte=start_date) & Q(note_date__lte=end_date, note_deleted=False)
         res_note_list = Note.objects.filter(query)
     else:
         response['status'] = 301
@@ -207,3 +207,50 @@ def search_note(request):
         response['msg'] = 'no result'
     return JsonResponse(response)
 
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def recycle_note(request):
+    response = {}
+    js = json.loads(request.body)
+
+    note_obj = Note.objects.get(note_id=js['note_id'])
+    note_obj.note_deleted = True
+    note_obj.save()
+    response['status'] = 0
+    response['msg'] = 'success'
+    return JsonResponse(response)
+
+@require_http_methods(['POST'])
+@csrf_exempt
+def recycle_note(request):
+    response = {}
+    js = json.loads(request.body)
+
+    note_obj = Note.objects.get(note_id=js['note_id'])
+    note_obj.note_deleted = True
+    note_obj.save()
+    response['status'] = 0
+    response['msg'] = 'success'
+    return JsonResponse(response)
+
+
+@csrf_exempt
+@require_http_methods('DELETE')
+def delete_note(request):
+    response = {}
+    js = json.loads(request.body)
+    try:
+        # 查找用户
+        note = Note.objects.filter(note_id=js['note_id']).get()
+        note.delete()
+        response['msg'] = 'success'
+        response['status'] = 0
+    except Note.DoesNotExist:
+        response['msg'] = 'User not found'
+        response['status'] = 31
+    except Exception as e:
+        response['msg'] = str(e)
+        response['status'] = 4
+
+    return JsonResponse(response)

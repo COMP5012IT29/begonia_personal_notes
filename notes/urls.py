@@ -10,5 +10,7 @@ urlpatterns = [
     path('showNoteList/',show_notes,name='show note list'),
     path('showHint/',view_hint,name='show note password hint'),
     path('search/',search_note,name='search note'),
-    path('starNote/',star_note,name="star note")
+    path('starNote/',star_note,name="star note"),
+    path('recycle/',recycle_note,name="recycle note"),
+    path('deleteNote/',delete_note,name="delete note")
 ]
