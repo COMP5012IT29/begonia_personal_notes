@@ -7,13 +7,19 @@ from django.db.models import Q
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
+from rest_framework.decorators import permission_classes, api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework_simplejwt import authentication
+
 from notes.models import Note
 from user.models import User
 from notes.utils import *
 
+
 # Create your views here.
-@require_http_methods(['POST'])
+@api_view(['POST'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def add_note(request):
     response = {}
     js = json.loads(request.body)
@@ -28,14 +34,14 @@ def add_note(request):
 
     salt = generate_random_salt(32)
     iv = os.urandom(16)
-    enc_content = encrypt_content(password,salt,iv,content)
+    enc_content = encrypt_content(password, salt, iv, content)
     note = Note(
-            note_user_id=user_id,
-            note_title=title,note_content=enc_content,
-            note_salt=salt,note_iv=iv,
-            note_date=datetime.now().date(),
-            note_pwd_hint=hint,
-            note_tag=tag)
+        note_user_id=user_id,
+        note_title=title, note_content=enc_content,
+        note_salt=salt, note_iv=iv,
+        note_date=datetime.now().date(),
+        note_pwd_hint=hint,
+        note_tag=tag)
     note.save()
 
     response['msg'] = 'success'
@@ -43,8 +49,9 @@ def add_note(request):
     return JsonResponse(response)
 
 
-@require_http_methods(['POST'])
+@api_view(['POST'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def view_note(request):
     response = {}
     js = json.loads(request.body)
@@ -56,24 +63,25 @@ def view_note(request):
     response['msg'] = 'success'
     response['status'] = 0
     try:
-        dec_content = decrypt_content(password,salt,iv,note_obj.note_content)
+        dec_content = decrypt_content(password, salt, iv, note_obj.note_content)
         response['data'] = {
             'title': note_obj.note_title,
             'content': dec_content.decode(),
-            'tag':note_obj.note_tag,
-            'date':note_obj.note_date,
-            'stared':note_obj.note_stared
+            'tag': note_obj.note_tag,
+            'date': note_obj.note_date,
+            'stared': note_obj.note_stared
         }
     except Exception as e:
-        if isinstance(e,UnicodeDecodeError):
+        if isinstance(e, UnicodeDecodeError):
             response['msg'] = 'Wrong password'
             response['status'] = 31
 
     return JsonResponse(response)
 
 
-@require_http_methods(['GET'])
+@api_view(['GET'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def view_hint(request):
     response = {}
     note_id = request.GET.get('note_id')
@@ -85,8 +93,9 @@ def view_hint(request):
     return JsonResponse(response)
 
 
-@require_http_methods(['POST'])
+@api_view(['POST'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def edit_note(request):
     response = {}
     js = json.loads(request.body)
@@ -95,11 +104,11 @@ def edit_note(request):
     iv = note_obj.note_iv
 
     title = js['title']
-    password = js['password'] # 这里如果密码错误会覆盖原密码
+    password = js['password']  # 这里如果密码错误会覆盖原密码
     content = js['content']
     hint = js['hint']
     tag = js['tag']
-    enc_content = encrypt_content(password,salt,iv,content)
+    enc_content = encrypt_content(password, salt, iv, content)
 
     note_obj.note_title = title
     note_obj.note_content = enc_content
@@ -112,8 +121,9 @@ def edit_note(request):
     return JsonResponse(response)
 
 
-@require_http_methods(['POST'])
+@api_view(['POST'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def star_note(request):
     response = {}
     js = json.loads(request.body)
@@ -125,8 +135,9 @@ def star_note(request):
     return JsonResponse(response)
 
 
-@require_http_methods(['GET'])
+@api_view(['GET'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def show_notes(request):
     response = {}
     username = request.GET.get('username')
@@ -148,9 +159,9 @@ def show_notes(request):
     res = []
     for note in res_note_list:
         res.append({
-            'id':note.note_id,
-            'title':note.note_title,
-            'date':note.note_date,
+            'id': note.note_id,
+            'title': note.note_title,
+            'date': note.note_date,
             'tag': note.note_tag
         })
     response['status'] = 0
@@ -159,8 +170,10 @@ def show_notes(request):
 
     return JsonResponse(response)
 
-@require_http_methods(['POST'])
+
+@api_view(['POST'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def search_note(request):
     response = {}
     js = json.loads(request.body)
@@ -179,7 +192,7 @@ def search_note(request):
     elif type == 2:
         res_note_list = Note.objects.filter(note_tag__icontains=keyword, note_deleted=False)
     elif type == 3:
-        start_date,end_date = keyword.split(',')
+        start_date, end_date = keyword.split(',')
         start_date = datetime.strptime(start_date, '%Y-%m-%d')
         end_date = datetime.strptime(end_date, '%Y-%m-%d')
         query = Q(note_date__gte=start_date) & Q(note_date__lte=end_date, note_deleted=False)
@@ -208,8 +221,9 @@ def search_note(request):
     return JsonResponse(response)
 
 
-@require_http_methods(['POST'])
+@api_view(['POST'])
 @csrf_exempt
+@permission_classes((IsAuthenticated,))
 def recycle_note(request):
     response = {}
     js = json.loads(request.body)
@@ -223,8 +237,9 @@ def recycle_note(request):
     return JsonResponse(response)
 
 
+@api_view(['DELETE'])
 @csrf_exempt
-@require_http_methods('DELETE')
+@permission_classes((IsAuthenticated,))
 def delete_note(request):
     response = {}
     js = json.loads(request.body)
@@ -242,8 +257,10 @@ def delete_note(request):
 
     return JsonResponse(response)
 
+
 @csrf_exempt
-@require_http_methods('POST')
+@api_view(['POST'])
+@permission_classes((IsAuthenticated,))
 def recovery_note(request):
     response = {}
     js = json.loads(request.body)

@@ -8,6 +8,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 import json
 from django.db.utils import IntegrityError
+from rest_framework.decorators import permission_classes, api_view
+from rest_framework.permissions import IsAuthenticated
+
 from user.models import User
 from user.utils import get_tokens_for_user
 
@@ -18,9 +21,9 @@ from user.utils import get_tokens_for_user
 def add_user(request):
     response = {}
     js = json.loads(request.body)
-    #查找
-    res_email = User.objects.filter(email = js['email']).count()
-    res_phone = User.objects.filter(phone = js['phone']).count()
+    # 查找
+    res_email = User.objects.filter(email=js['email']).count()
+    res_phone = User.objects.filter(phone=js['phone']).count()
     if res_email != 0:
         response['msg'] = 'Email number has been registered'
         response['status'] = 321
@@ -31,7 +34,7 @@ def add_user(request):
 
     elif res_email == 0 and res_phone == 0:
         user = User(username=js['username'],
-                    password = make_password(js["password"]),
+                    password=make_password(js["password"]),
                     email=js['email'], phone=js['phone'])
         user.save()
         response['msg'] = 'success'
@@ -48,23 +51,26 @@ def login_user(request):
 
     email = js['email']
     # username = js['username']
-    res_email = User.objects.filter(email=js['email']).get()
-    username = res_email.username
-    password = js['password']
-    user = authenticate(username=username, password=password)
-    if user is None:
-        response['msg'] = 'User not exist or wrong password'
-        response['status'] = 31
-    else:
+    try:
+        res_email = User.objects.filter(email=js['email']).get()
+        username = res_email.username
+        password = js['password']
+        user = authenticate(username=username, password=password)
+
         response['token'] = get_tokens_for_user(user)
         response["username"] = username
         response['msg'] = 'Success'
         response['status'] = 0
+    except User.DoesNotExist:
+        response['msg'] = 'User not exist or wrong password'
+        response['status'] = 31
 
     return JsonResponse(response)
 
+
 @csrf_exempt
-@require_http_methods(['PUT'])
+@api_view(['PUT'])
+@permission_classes((IsAuthenticated,))
 def update_user(request):
     response = {}
     js = json.loads(request.body)
@@ -92,7 +98,6 @@ def update_user(request):
                 return JsonResponse(response)
             user.username = js['new_username']
 
-
         user.save()
 
     except User.DoesNotExist:
@@ -107,11 +112,12 @@ def update_user(request):
 
 
 @csrf_exempt
-@require_http_methods('DELETE')
+@api_view(['DELETE'])
+@permission_classes((IsAuthenticated,))
 def delete_user(request):
     response = {}
     js = json.loads(request.body)
-    #查找用户
+    # 查找用户
     try:
         # 查找用户
         user = User.objects.filter(username=js['username']).get()
